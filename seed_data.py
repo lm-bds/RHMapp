@@ -41,8 +41,6 @@ def setup_demo_data():
     for first, last in names:
         patient_id = uuid.uuid4()
         baseline = random.uniform(60, 100)
-        
-        # Calculate random DOB for super-agers (75-98)
         age_days = random.randint(75 * 365, 98 * 365)
         dob = date.today() - timedelta(days=age_days)
 
@@ -70,37 +68,36 @@ def setup_demo_data():
         db.add(patient)
         db.flush()
 
-        # Randomly assign acuity
-        rand_val = random.random()
-        
-        if rand_val > 0.8: # URGENT (Weight Spike)
-            vital = models.Vital(
-                patient_id=patient_id,
-                weight=round(baseline + random.uniform(2.1, 4.5), 1),
-                systolic=random.randint(145, 180),
-                diastolic=random.randint(95, 110),
-                heart_rate=random.randint(80, 110)
-            )
-        elif rand_val > 0.6: # WATCH (BP Elevation)
-            vital = models.Vital(
-                patient_id=patient_id,
-                weight=round(baseline + random.uniform(0.5, 1.2), 1),
-                systolic=random.randint(132, 139),
-                diastolic=random.randint(82, 88),
-                heart_rate=random.randint(60, 90)
-            )
-        else: # STABLE
-            vital = models.Vital(
-                patient_id=patient_id,
-                weight=round(baseline + random.uniform(-0.5, 0.5), 1),
-                systolic=random.randint(110, 125),
-                diastolic=random.randint(70, 78),
-                heart_rate=random.randint(60, 80)
-            )
-        db.add(vital)
+        # Add 10 historical vitals per patient
+        for i in range(10):
+            ts = datetime.now(timezone.utc) - timedelta(days=i)
+            rand_val = random.random()
+            
+            if rand_val > 0.9: # URGENT
+                v = models.Vital(
+                    patient_id=patient_id, timestamp=ts,
+                    weight=round(baseline + random.uniform(2.1, 4.5), 1),
+                    systolic=random.randint(145, 180), diastolic=random.randint(95, 110),
+                    heart_rate=random.randint(80, 110), spo2=random.randint(88, 91)
+                )
+            else: # STABLE
+                v = models.Vital(
+                    patient_id=patient_id, timestamp=ts,
+                    weight=round(baseline + random.uniform(-0.5, 1.2), 1),
+                    systolic=random.randint(110, 130), diastolic=random.randint(70, 85),
+                    heart_rate=random.randint(60, 85), spo2=random.randint(95, 99)
+                )
+            db.add(v)
+
+        # Add Demo Documents
+        docs = [
+            models.Document(patient_id=patient_id, filename="Referral_Cardiology.pdf", doc_type="Referral"),
+            models.Document(patient_id=patient_id, filename="Echocardiogram_Result.pdf", doc_type="Imaging")
+        ]
+        db.add_all(docs)
 
     db.commit()
-    print("Database seeded successfully with Australian patient records.")
+    print("Database re-seeded successfully.")
     db.close()
 
 if __name__ == "__main__":

@@ -1,0 +1,34 @@
+<form hx-post="/api/v1/patients/{{ patient_id }}/vitals" hx-target="#vitals-list" hx-swap="innerHTML" hx-on::after-request="this.remove()" class="bg-brand-dark/5 p-5 rounded-2xl border border-brand-dark/10 mb-6 shadow-inner">
+    <div class="flex justify-between items-center mb-4">
+        <label class="block text-[10px] font-black text-brand-dark uppercase tracking-widest">Manual Vital Entry</label>
+        <span class="text-[9px] text-stone-400 font-bold uppercase italic">Fields are optional - record only what is measured</span>
+    </div>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div>
+            <label class="block text-[9px] font-black text-stone-400 uppercase mb-1">Weight (kg)</label>
+            <input type="number" step="0.1" name="weight" placeholder="--" class="w-full p-2 border rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-brand-accent outline-none">
+        </div>
+        <div>
+            <label class="block text-[9px] font-black text-stone-400 uppercase mb-1">Blood Pressure</label>
+            <div class="flex items-center space-x-1">
+                <input type="number" name="systolic" placeholder="Sys" class="w-full p-2 border rounded-lg text-sm font-bold bg-white outline-none">
+                <span class="text-stone-300">/</span>
+                <input type="number" name="diastolic" placeholder="Dia" class="w-full p-2 border rounded-lg text-sm font-bold bg-white outline-none">
+            </div>
+        </div>
+        <div>
+            <label class="block text-[9px] font-black text-stone-400 uppercase mb-1">SpO2 (%)</label>
+            <input type="number" name="spo2" placeholder="--" class="w-full p-2 border rounded-lg text-sm font-bold bg-white outline-none">
+        </div>
+        <div>
+            <label class="block text-[9px] font-black text-stone-400 uppercase mb-1">Heart Rate (BPM)</label>
+            <input type="number" name="heart_rate" placeholder="--" class="w-full p-2 border rounded-lg text-sm font-bold bg-white outline-none">
+        </div>
+    </div>
+    
+    <div class="flex justify-end space-x-3 pt-2 border-t border-brand-dark/5">
+        <button type="button" onclick="this.closest('form').remove()" class="text-stone-400 px-4 py-1 text-[10px] font-bold uppercase">Cancel</button>
+        <button type="submit" class="bg-brand-dark text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-md transition-all">Record Vitals</button>
+    </div>
+</form>

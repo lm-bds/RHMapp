@@ -1,0 +1,14 @@
+<form hx-post="/dashboard/patient/{{ patient_id }}/documents" hx-target="#doc-list-ehr" hx-swap="afterbegin" hx-on::after-request="this.remove()" class="bg-stone-50 p-4 rounded-xl border border-dashed border-brand-accent/50 mb-4 space-y-3">
+    <label class="block text-[10px] font-black text-brand-dark uppercase tracking-widest">Upload Document Metadata</label>
+    <input type="text" name="filename" placeholder="Document Description (e.g. Echo Result Jan 2024)" class="w-full text-xs p-2 rounded border border-border-warm bg-white outline-none focus:ring-2 focus:ring-brand-accent" required>
+    <div class="flex space-x-2">
+        <select name="doc_type" class="flex-1 text-xs p-2 rounded border border-border-warm bg-white">
+            <option value="Referral">Referral</option>
+            <option value="Imaging">Imaging</option>
+            <option value="Pathology">Pathology</option>
+            <option value="Discharge">Discharge Summary</option>
+        </select>
+        <button type="submit" class="bg-brand-dark text-white px-5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors">Upload</button>
+    </div>
+    <button type="button" onclick="this.closest('form').remove()" class="w-full text-stone-400 text-[9px] font-bold uppercase pt-1">Cancel</button>
+</form>

@@ -1,211 +1,252 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mb-6 flex justify-between items-center">
-    <a href="/dashboard" class="text-blue-600 hover:underline flex items-center">
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-        Back to Dashboard
-    </a>
-    <h1 class="text-3xl font-bold text-gray-900">Patient Electronic Health Record</h1>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<div class="grid grid-cols-3 gap-6">
-    <!-- Sidebar: Demographics -->
-    <div class="col-span-1 space-y-6">
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex justify-between items-start border-b pb-2 mb-4">
-                <h2 class="text-xl font-bold">Demographics</h2>
-                <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter {% if patient.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                    {{ 'ACTIVE' if patient.is_active else 'INACTIVE' }}
+<div class="h-full flex flex-col space-y-4">
+    <!-- Top Header: High Density Demographics -->
+    <div class="bg-card p-4 rounded-2xl shadow-sm border border-border-warm flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <a href="/dashboard" class="bg-canvas hover:bg-border-warm p-2 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-brand-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-xl font-black text-brand-dark tracking-tight">{{ patient.name }}</h1>
+                <p class="text-[10px] font-black text-brand-accent uppercase tracking-widest">
+                    {{ patient.primary_diagnosis }} • GP: {{ patient.primary_gp or 'Unassigned' }}
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-6">
+            <div class="text-right border-r border-border-warm pr-6">
+                <span class="text-[10px] font-bold text-stone-400 uppercase block">Medicare / IRN</span>
+                <span class="text-xs font-mono font-bold">{{ patient.medicare_number or '---' }} / {{ patient.medicare_irn or '-' }}</span>
+            </div>
+            <div class="text-right border-r border-border-warm pr-6">
+                <span class="text-[10px] font-bold text-stone-400 uppercase block">Indigenous Status</span>
+                <span class="text-xs font-bold">{{ patient.indigenous_status.name.replace('_', ' ').title() }}</span>
+            </div>
+            <div class="text-right">
+                <span class="text-[10px] font-bold text-stone-400 uppercase block">Status</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-status-stable/10 text-status-stable border border-status-stable/20">
+                    Active EHR
                 </span>
             </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">Full Name</span>
-                    <span class="font-bold text-xl text-gray-900">{{ patient.name }}</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">DOB</span>
-                        <span class="font-bold text-sm">{{ patient.date_of_birth.strftime('%d %b %Y') }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">Sex</span>
-                        <span class="font-bold text-sm">{{ patient.sex.value }}</span>
-                    </div>
-                </div>
+        </div>
+    </div>
 
-                <div class="bg-blue-50 p-3 rounded border border-blue-100 space-y-2">
-                    <h3 class="text-[10px] font-black text-blue-700 uppercase tracking-widest">Health Identifiers</h3>
-                    {% if patient.medicare_number %}
-                    <div>
-                        <span class="text-gray-500 text-[10px] block font-bold">Medicare</span>
-                        <span class="font-mono text-sm">{{ patient.medicare_number }} / {{ patient.medicare_irn }}</span>
-                    </div>
-                    {% endif %}
-                    {% if patient.dva_file_number %}
-                    <div>
-                        <span class="text-gray-500 text-[10px] block font-bold">DVA File</span>
-                        <span class="font-mono text-sm">{{ patient.dva_file_number }}</span>
-                    </div>
-                    {% endif %}
-                    {% if patient.ihi_number %}
-                    <div>
-                        <span class="text-gray-500 text-[10px] block font-bold">IHI</span>
-                        <span class="font-mono text-xs">{{ patient.ihi_number }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <div class="space-y-3 pt-2">
-                    <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Emergency Contact</h3>
-                    <div>
-                        <span class="text-gray-400 text-[10px] block">Patient Phone</span>
-                        <span class="font-bold text-sm">{{ patient.phone }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-400 text-[10px] block">NOK ({{ patient.nok_relationship.value }})</span>
-                        <span class="font-bold text-sm">{{ patient.nok_name }}</span>
-                        <span class="block text-xs text-gray-600">{{ patient.nok_phone }}</span>
-                    </div>
-                </div>
+    <!-- Always Visible: Clinical Trends Tier -->
+    <div class="grid grid-cols-3 gap-4">
+        <div class="bg-card p-4 rounded-2xl border border-border-warm shadow-sm h-48 flex flex-col">
+            <p class="text-[10px] font-black text-stone-400 uppercase tracking-widest text-center mb-2">Weight Trajectory (kg)</p>
+            <div class="flex-1 min-h-0">
+                <canvas id="weightChart"></canvas>
             </div>
         </div>
-
-        <!-- Clinical Baselines Card -->
-        <div class="bg-gray-900 text-white shadow rounded-lg p-6">
-            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">Clinical Baselines</h2>
-            <div class="space-y-4">
-                <div>
-                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Primary Diagnosis</span>
-                    <span class="text-sm font-bold text-blue-300">{{ patient.primary_diagnosis }}</span>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">NYHA Class</span>
-                        <span class="font-bold text-lg">Class {{ patient.nyha_class.value }}</span>
-                    </div>
-                    <div>
-                        <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Dry Weight</span>
-                        <span class="font-bold text-lg text-green-400">{{ patient.baseline_weight }} kg</span>
-                    </div>
-                </div>
-                <div>
-                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Target BP Range</span>
-                    <span class="font-bold text-lg text-red-400">< {{ patient.target_systolic }}/{{ patient.target_diastolic }}</span>
-                </div>
-                <div>
-                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Primary GP</span>
-                    <span class="text-sm font-bold">{{ patient.primary_gp or 'Not Stated' }}</span>
-                </div>
+        <div class="bg-card p-4 rounded-2xl border border-border-warm shadow-sm h-48 flex flex-col">
+            <p class="text-[10px] font-black text-stone-400 uppercase tracking-widest text-center mb-2">Blood Pressure (mmHg)</p>
+            <div class="flex-1 min-h-0">
+                <canvas id="bpChart"></canvas>
             </div>
         </div>
-
-        <div class="bg-white shadow rounded-lg p-6">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">Quick Actions</h2>
-            <div class="space-y-2">
-                <button 
-                    hx-get="/dashboard/patient/{{ patient.id }}/note-form" 
-                    hx-target="#note-form-anchor"
-                    class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-bold text-sm">Add Clinical Note</button>
-                <button 
-                    hx-get="/dashboard/patient/{{ patient.id }}/event-form?type=appointment" 
-                    hx-target="#event-form-anchor"
-                    class="w-full bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200 transition font-bold text-sm">Schedule Appointment</button>
+        <div class="bg-card p-4 rounded-2xl border border-border-warm shadow-sm h-48 flex flex-col">
+            <p class="text-[10px] font-black text-stone-400 uppercase tracking-widest text-center mb-2">SpO2 Trend (%)</p>
+            <div class="flex-1 min-h-0">
+                <canvas id="spo2Chart"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="col-span-2 space-y-6">
-        <!-- Vitals History -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-800">Vital Signs History</h2>
+    <div class="flex-1 grid grid-cols-12 gap-6 overflow-hidden pb-4">
+        
+        <!-- SIDEBAR LEFT: Patient Identity & Quick Actions -->
+        <div class="col-span-3 flex flex-col space-y-4 overflow-y-auto custom-scrollbar pr-2">
+            <!-- Identity Details -->
+            <div class="bg-card p-5 rounded-2xl border border-border-warm shadow-sm space-y-4">
+                <h2 class="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b border-border-warm pb-2 mb-2">Clinical Context</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <p class="text-[9px] font-bold text-stone-400 uppercase">DOB</p>
+                        <p class="text-xs font-black text-brand-dark">{{ patient.date_of_birth.strftime('%d %b %Y') }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold text-stone-400 uppercase">Sex</p>
+                        <p class="text-xs font-black text-brand-dark">{{ patient.sex.value }}</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-brand-dark rounded-xl text-white">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[9px] font-bold opacity-50 uppercase">NYHA Class</span>
+                        <span class="text-sm font-black">{{ patient.nyha_class.value }}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[9px] font-bold opacity-50 uppercase">Dry Weight</span>
+                        <span class="text-sm font-black text-status-stable">{{ patient.baseline_weight }} kg</span>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[9px] font-bold text-stone-400 uppercase">Contact</p>
+                    <p class="text-xs font-bold text-brand-dark">{{ patient.phone }}</p>
+                    <p class="text-[10px] text-stone-500 mt-1 leading-tight">{{ patient.address }}</p>
+                </div>
             </div>
-            <div class="max-h-64 overflow-y-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Date</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Weight</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">BP</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">HR</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                        {% for v in vitals %}
-                        <tr>
-                            <td class="px-4 py-3 text-sm text-gray-600 font-mono">{{ v.timestamp.strftime('%d %b %Y %H:%M') }}</td>
-                            <td class="px-4 py-3 text-sm font-bold {% if v.weight and patient.baseline_weight and v.weight > patient.baseline_weight + 2 %}text-red-600{% endif %}">{{ v.weight or '--' }} kg</td>
-                            <td class="px-4 py-3 text-sm font-bold">{{ v.systolic or '--' }}/{{ v.diastolic or '--' }}</td>
-                            <td class="px-4 py-3 text-sm">{{ v.heart_rate or '--' }}</td>
-                        </tr>
+
+            <!-- Quick Actions -->
+            <div class="bg-card p-5 rounded-2xl border border-border-warm shadow-sm space-y-3">
+                <h2 class="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b border-border-warm pb-2 mb-2">Actions</h2>
+                <button onclick="switchTab('vitals')" hx-get="/dashboard/patient/{{ patient.id }}/vitals-form" hx-target="#vitals-form-anchor"
+                        class="w-full bg-brand-dark text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-md">Add Vitals</button>
+                <button onclick="switchTab('notes')" hx-get="/dashboard/patient/{{ patient.id }}/note-form" hx-target="#note-form-anchor"
+                        class="w-full bg-brand-accent text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-brand-terracotta">Add Note</button>
+                <button onclick="switchTab('docs')" hx-get="/dashboard/patient/{{ patient.id }}/document-form" hx-target="#document-form-anchor"
+                        class="w-full bg-canvas text-brand-dark py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-border-warm hover:bg-border-warm">Add Document</button>
+                <button hx-get="/dashboard/patient/{{ patient.id }}/event-form?type=hospitalization" hx-target="#event-form-anchor"
+                        class="w-full bg-status-critical text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:opacity-90">Log Hospitalisation</button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT: Tabbed Workspace -->
+        <div class="col-span-6 flex flex-col bg-card rounded-2xl border border-border-warm shadow-sm overflow-hidden">
+            <div class="flex border-b border-border-warm bg-stone-50">
+                <button onclick="switchTab('vitals')" id="tab-vitals" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-brand-accent border-b-2 border-brand-accent bg-white">Vital Signs</button>
+                <button onclick="switchTab('notes')" id="tab-notes" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-stone-400 hover:bg-white">Notes</button>
+                <button onclick="switchTab('docs')" id="tab-docs" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-stone-400 hover:bg-white">Documents</button>
+            </div>
+
+            <div id="workspace-content" class="flex-1 overflow-y-auto p-5 custom-scrollbar bg-white">
+                <!-- Vitals Tab -->
+                <div id="content-vitals" class="tab-panel">
+                    <div id="vitals-form-anchor"></div>
+                    <table class="min-w-full divide-y divide-border-warm">
+                        <thead class="bg-stone-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">Date</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">Wt</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">BP</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">O2</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">HR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vitals-list" class="divide-y divide-border-warm">
+                            {% for v in vitals %}
+                            <tr class="hover:bg-canvas transition-colors">
+                                <td class="px-4 py-3 text-xs font-bold text-stone-500 font-mono">{{ v.timestamp.strftime('%d %b • %H:%M') }}</td>
+                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.weight or '--' }}</td>
+                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.systolic }}/{{ v.diastolic }}</td>
+                                <td class="px-4 py-3 text-sm font-black {% if v.spo2 and v.spo2 < 92 %}text-status-critical{% else %}text-status-stable{% endif %}">{{ v.spo2 or '--' }}%</td>
+                                <td class="px-4 py-3 text-sm font-black text-stone-600">{{ v.heart_rate or '--' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Notes Tab -->
+                <div id="content-notes" class="tab-panel hidden space-y-4">
+                    <div id="note-form-anchor"></div>
+                    <div id="notes-list" class="space-y-4">
+                        {% for note in notes %}
+                        <div class="bg-amber-50/50 p-4 rounded-xl border border-border-warm shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-[9px] font-bold text-stone-400 uppercase">{{ note.timestamp.strftime('%d %b %Y • %H:%M') }}</span>
+                                <span class="text-[9px] font-black text-brand-accent uppercase bg-white px-2 py-0.5 rounded-full shadow-xs">Dr. {{ note.author.email.split('@')[0].title() }}</span>
+                            </div>
+                            <p class="text-stone-800 text-xs leading-relaxed whitespace-pre-wrap">{{ note.content }}</p>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
+
+                <!-- Documents Tab -->
+                <div id="content-docs" class="tab-panel hidden space-y-4">
+                    <div id="document-form-anchor"></div>
+                    <div id="doc-list-ehr" class="space-y-2">
+                        {% for doc in documents %}
+                        <div class="flex items-center p-3 bg-white border border-border-warm rounded-xl hover:shadow-md transition-all">
+                            <div class="bg-brand-dark/5 p-2 rounded-lg text-brand-dark mr-3"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div>
+                            <div><p class="text-xs font-bold text-stone-800">{{ doc.filename }}</p><p class="text-[9px] font-black text-brand-accent uppercase">{{ doc.doc_type }}</p></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Events & Timeline -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b">
-                <h2 class="text-xl font-bold text-gray-800">Events & Timeline</h2>
-            </div>
-            <div class="p-6">
+        <!-- SIDEBAR RIGHT: Longitudinal Timeline -->
+        <div class="col-span-3 flex flex-col space-y-4 overflow-y-auto custom-scrollbar pl-2">
+            <div class="bg-card p-5 rounded-2xl border border-border-warm shadow-sm flex-1">
+                <h2 class="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b border-border-warm pb-2 mb-6 text-center italic">Patient Lifecycle</h2>
                 <div id="event-form-anchor"></div>
-                <div id="events-timeline" class="space-y-6">
+                <div id="events-timeline" class="relative space-y-6">
                     {% for event in events %}
-                    <div class="flex">
-                        <div class="flex flex-col items-center mr-4">
-                            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <div class="w-px h-full bg-gray-200"></div>
-                        </div>
-                        <div class="pb-6">
-                            <p class="text-xs text-gray-400 font-mono">{{ event.timestamp.strftime('%d %b %Y') }}</p>
-                            <p class="text-sm font-bold uppercase tracking-tight 
-                                {% if event.event_type == 'hospitalization' %}text-red-600
-                                {% elif event.event_type == 'med_change' %}text-purple-600
-                                {% elif event.event_type == 'alert_acknowledged' %}text-gray-500
-                                {% else %}text-blue-600{% endif %}">
-                                {{ event.event_type.replace('_', ' ') }}
-                            </p>
-                            <p class="text-gray-700 mt-1 text-sm">{{ event.description }}</p>
+                    <div class="relative pl-6 border-l-2 {% if event.event_type == 'hospitalization' %}border-status-critical bg-status-critical/[0.03] p-2 rounded-r-xl -ml-2{% else %}border-border-warm{% endif %} transition-all">
+                        <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full {% if event.event_type == 'hospitalization' %}bg-status-critical ring-4 ring-status-critical/10 animate-pulse{% else %}bg-brand-accent{% endif %} border-2 border-white shadow-sm"></div>
+                        <div>
+                            <p class="text-[9px] font-bold text-stone-400 uppercase tracking-tighter">{{ event.timestamp.strftime('%d %b %Y') }}</p>
+                            <p class="text-xs font-black text-brand-dark uppercase tracking-tight">{{ event.event_type.replace('_', ' ') }}</p>
+                            <p class="text-[11px] text-stone-600 leading-snug mt-1">{{ event.description }}</p>
                         </div>
                     </div>
-                    {% else %}
-                    <p class="text-gray-400 italic">No historical events recorded.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Clinical Notes -->
-        <div class="bg-white shadow rounded-lg overflow-hidden">
-            <div class="px-6 py-4 bg-gray-50 border-b">
-                <h2 class="text-xl font-bold text-gray-800">Clinical Notes</h2>
-            </div>
-            <div class="p-6 space-y-4">
-                <div id="note-form-anchor"></div>
-                <div id="notes-list" class="space-y-4">
-                    {% for note in notes %}
-                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400 shadow-sm">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-xs font-bold text-gray-500 uppercase">{{ note.timestamp.strftime('%d %b %Y %H:%M') }}</span>
-                            <span class="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
-                                Dr. {{ note.author.email.split('@')[0].title() }}
-                            </span>
-                        </div>
-                        <p class="text-gray-800 text-sm whitespace-pre-wrap">{{ note.content }}</p>
-                    </div>
-                    {% else %}
-                    <p class="text-gray-400 italic text-sm">No clinical notes recorded.</p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.workspace-tab').forEach(t => {
+            t.classList.remove('text-brand-accent', 'border-brand-accent', 'bg-white', 'border-b-2');
+            t.classList.add('text-stone-400');
+        });
+        
+        document.getElementById('content-' + tab).classList.remove('hidden');
+        const activeTab = document.getElementById('tab-' + tab);
+        activeTab.classList.add('text-brand-accent', 'border-brand-accent', 'bg-white', 'border-b-2');
+        activeTab.classList.remove('text-stone-400');
+    }
+
+    const data = {{ vitals_json | tojson | safe }};
+    const labels = data.map(v => v.timestamp);
+    const baseW = {{ patient.baseline_weight }};
+
+    const chartConfig = (ctx, label, dataArr, color, fill=false, baseLine=null) => new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: label, data: dataArr, borderColor: color, backgroundColor: color+'1A', fill: fill, tension: 0.4, pointRadius: 2 },
+                ...(baseLine ? [{ data: new Array(labels.length).fill(baseLine), borderColor: '#e6e2da', borderDash: [5, 5], pointRadius: 0 }] : [])
+            ]
+        },
+        options: { 
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } }, 
+            scales: { x: { display: false }, y: { grid: { color: '#f7f5f0' }, ticks: { font: { size: 8 } } } } 
+        }
+    });
+
+    chartConfig(document.getElementById('weightChart').getContext('2d'), 'Weight', data.map(v => v.weight), '#4a3728', true, baseW);
+    
+    new Chart(document.getElementById('bpChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { data: data.map(v => v.systolic), borderColor: '#dc2626', borderWidth: 2, tension: 0.4, pointRadius: 1 },
+                { data: data.map(v => v.diastolic), borderColor: '#b47b59', borderWidth: 2, tension: 0.4, pointRadius: 1 }
+            ]
+        },
+        options: { 
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } }, 
+            scales: { x: { display: false }, y: { grid: { color: '#f7f5f0' }, ticks: { font: { size: 8 } } } } 
+        }
+    });
+
+    chartConfig(document.getElementById('spo2Chart').getContext('2d'), 'SpO2', data.map(v => v.spo2), '#16a34a', true);
+</script>
 {% endblock %}

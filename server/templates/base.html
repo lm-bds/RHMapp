@@ -1,29 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPM Clinician Dashboard</title>
+    <title>RPM • Clinical Portal</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-dark': '#4a3728',
+                        'brand-accent': '#b47b59',
+                        'brand-terracotta': '#c68642',
+                        'canvas': '#f7f5f0',
+                        'card': '#ffffff',
+                        'border-warm': '#e6e2da',
+                        'status-critical': '#dc2626',
+                        'status-stable': '#16a34a',
+                        'status-watch': '#d97706',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'xl': '12px',
+                        '2xl': '16px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f5f0; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e6e2da; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #d1cdc5; }
+    </style>
 </head>
-<body class="bg-gray-50 font-sans">
-    <nav class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <span class="text-xl font-bold text-blue-600">RPM Admin</span>
+<body class="h-full flex flex-col antialiased">
+    <nav class="bg-brand-dark text-white border-b border-white/10 sticky top-0 z-50 shadow-md">
+        <div class="max-w-[1600px] mx-auto px-6">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-accent w-8 h-8 rounded-lg flex items-center justify-center shadow-inner">
+                        <span class="font-black text-white text-xs">RM</span>
+                    </div>
+                    <span class="text-lg font-black tracking-tighter uppercase italic">RPM • Australian Triage</span>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-sm text-gray-500">{{ current_user.email }}</span>
-                    <a href="/logout" class="text-sm font-medium text-gray-700 hover:text-gray-900">Logout</a>
+                <div class="flex items-center space-x-6">
+                    <div class="flex flex-col items-end">
+                        <span class="text-[10px] font-black text-brand-accent uppercase tracking-widest leading-none">Clinician</span>
+                        <span class="text-sm font-medium opacity-90">{{ current_user.email }}</span>
+                    </div>
+                    <a href="/logout" class="bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full text-xs font-bold transition-all border border-white/5 uppercase tracking-widest">Logout</a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-6 overflow-hidden">
         {% block content %}{% endblock %}
     </main>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>
