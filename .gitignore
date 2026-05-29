@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+.env
+rpm_db.db
+.DS_Store
+mobile/node_modules/
+mobile/.expo/

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 shadow-sm">
+            <p class="text-sm text-red-700 font-bold uppercase">Urgent Action Required</p>
+            <p class="text-3xl font-black text-red-900">{{ patient_data | selectattr('acuity_label', 'equalto', 'URGENT') | list | length }}</p>
+        </div>
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 shadow-sm">
+            <p class="text-sm text-yellow-700 font-bold uppercase">Pending Review</p>
+            <p class="text-3xl font-black text-yellow-900">{{ patient_data | selectattr('acuity_label', 'equalto', 'Watch') | list | length }}</p>
+        </div>
+        <div class="bg-white border-l-4 border-green-500 p-4 shadow-sm">
+            <p class="text-sm text-green-700 font-bold uppercase">Total Managed Patients</p>
+            <p class="text-3xl font-black text-gray-900">{{ patient_data | length }}</p>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="bg-white shadow rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </span>
+            <input type="text" id="patientSearch" onkeyup="filterPatients()" 
+                   placeholder="Search patients..." 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm">
+        </div>
+        <div class="flex items-center space-x-4">
+            <button hx-get="/dashboard/patient-form" 
+                    hx-target="body" 
+                    hx-swap="beforeend"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-black uppercase tracking-wider hover:bg-blue-700 transition shadow-sm">
+                + Add New Patient
+            </button>
+            <div class="flex items-center">
+                <input type="checkbox" id="unacknowledgedOnly" onchange="filterPatients()" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                <label for="unacknowledgedOnly" class="ml-2 text-sm font-bold text-gray-700">Urgent Only</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- High-Density Patient Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="overflow-x-auto max-h-[70vh]">
+            <table class="min-w-full divide-y divide-gray-200" id="patientTable">
+                <thead class="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Acuity</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Patient Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Vital Signs (Latest)</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Clinical Reasoning</th>
+                        <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in patient_data %}
+                    <tr class="patient-row hover:bg-gray-50 transition-colors {% if item.acuity_label == 'URGENT' and not item.is_acknowledged %}bg-red-50/50{% endif %}"
+                        data-urgent="{{ 'true' if item.acuity_label == 'URGENT' else 'false' }}"
+                        data-acknowledged="{{ 'true' if item.is_acknowledged else 'false' }}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div id="status-{{ item.patient.id }}">
+                                {% if item.acuity_label == 'URGENT' and not item.is_acknowledged %}
+                                    <button hx-get="/api/v1/vitals/{{ item.latest_vital.id }}/acknowledge-modal" 
+                                            hx-target="body"
+                                            hx-swap="beforeend"
+                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-red-600 text-white hover:bg-red-700 transition shadow-sm">
+                                        {{ item.acuity_label }} • ACK
+                                    </button>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider
+                                        {% if item.is_acknowledged %}bg-gray-100 text-gray-400
+                                        {% elif item.acuity_label == 'Watch' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ item.acuity_label }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-bold text-gray-900">{{ item.patient.name }}</div>
+                            <div class="text-xs text-gray-400 font-mono">{{ item.patient.id | string | truncate(8) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if item.latest_vital %}
+                                <div class="flex items-center space-x-3 text-sm">
+                                    <span class="{% if 'Weight' in item.reasons|join(' ') %}text-red-600 font-bold{% endif %}">{{ item.latest_vital.weight }}kg</span>
+                                    <span class="text-gray-300">|</span>
+                                    <span class="{% if 'Hypertension' in item.reasons|join(' ') %}text-red-600 font-bold{% endif %}">{{ item.latest_vital.systolic }}/{{ item.latest_vital.diastolic }}</span>
+                                </div>
+                            {% else %}
+                                <span class="text-xs text-gray-400 italic">No readings recorded</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-medium text-gray-600">
+                                {{ item.reasons | join(' • ') if item.reasons else 'Baseline stable' }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="/dashboard/patient/{{ item.patient.id }}/file" class="text-blue-600 hover:text-blue-900 font-bold">Open File →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function filterPatients() {
+    let input = document.getElementById("patientSearch");
+    let filter = input.value.toUpperCase();
+    let unackOnly = document.getElementById("unacknowledgedOnly").checked;
+    let table = document.getElementById("patientTable");
+    let tr = table.getElementsByClassName("patient-row");
+
+    for (let i = 0; i < tr.length; i++) {
+        let name = tr[i].getElementsByTagName("td")[1].textContent;
+        let reason = tr[i].getElementsByTagName("td")[3].textContent;
+        let isUrgent = tr[i].getAttribute("data-urgent") === "true";
+        let isAck = tr[i].getAttribute("data-acknowledged") === "true";
+        
+        let matchesSearch = name.toUpperCase().indexOf(filter) > -1 || reason.toUpperCase().indexOf(filter) > -1;
+        let matchesFilter = !unackOnly || (isUrgent && !isAck);
+
+        if (matchesSearch && matchesFilter) {
+            tr[i].style.display = "";
+        } else {
+            tr[i].style.display = "none";
+        }
+    }
+}
+</script>
+{% endblock %}

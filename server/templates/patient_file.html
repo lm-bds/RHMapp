@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <a href="/dashboard" class="text-blue-600 hover:underline flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        Back to Dashboard
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900">Patient Electronic Health Record</h1>
+</div>
+
+<div class="grid grid-cols-3 gap-6">
+    <!-- Sidebar: Demographics -->
+    <div class="col-span-1 space-y-6">
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex justify-between items-start border-b pb-2 mb-4">
+                <h2 class="text-xl font-bold">Demographics</h2>
+                <span class="px-2 py-1 rounded text-[10px] font-black uppercase tracking-tighter {% if patient.is_active %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ 'ACTIVE' if patient.is_active else 'INACTIVE' }}
+                </span>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">Full Name</span>
+                    <span class="font-bold text-xl text-gray-900">{{ patient.name }}</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">DOB</span>
+                        <span class="font-bold text-sm">{{ patient.date_of_birth.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-[10px] font-black uppercase block tracking-widest">Sex</span>
+                        <span class="font-bold text-sm">{{ patient.sex.value }}</span>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 p-3 rounded border border-blue-100 space-y-2">
+                    <h3 class="text-[10px] font-black text-blue-700 uppercase tracking-widest">Health Identifiers</h3>
+                    {% if patient.medicare_number %}
+                    <div>
+                        <span class="text-gray-500 text-[10px] block font-bold">Medicare</span>
+                        <span class="font-mono text-sm">{{ patient.medicare_number }} / {{ patient.medicare_irn }}</span>
+                    </div>
+                    {% endif %}
+                    {% if patient.dva_file_number %}
+                    <div>
+                        <span class="text-gray-500 text-[10px] block font-bold">DVA File</span>
+                        <span class="font-mono text-sm">{{ patient.dva_file_number }}</span>
+                    </div>
+                    {% endif %}
+                    {% if patient.ihi_number %}
+                    <div>
+                        <span class="text-gray-500 text-[10px] block font-bold">IHI</span>
+                        <span class="font-mono text-xs">{{ patient.ihi_number }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Emergency Contact</h3>
+                    <div>
+                        <span class="text-gray-400 text-[10px] block">Patient Phone</span>
+                        <span class="font-bold text-sm">{{ patient.phone }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-[10px] block">NOK ({{ patient.nok_relationship.value }})</span>
+                        <span class="font-bold text-sm">{{ patient.nok_name }}</span>
+                        <span class="block text-xs text-gray-600">{{ patient.nok_phone }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Baselines Card -->
+        <div class="bg-gray-900 text-white shadow rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">Clinical Baselines</h2>
+            <div class="space-y-4">
+                <div>
+                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Primary Diagnosis</span>
+                    <span class="text-sm font-bold text-blue-300">{{ patient.primary_diagnosis }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">NYHA Class</span>
+                        <span class="font-bold text-lg">Class {{ patient.nyha_class.value }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Dry Weight</span>
+                        <span class="font-bold text-lg text-green-400">{{ patient.baseline_weight }} kg</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Target BP Range</span>
+                    <span class="font-bold text-lg text-red-400">< {{ patient.target_systolic }}/{{ patient.target_diastolic }}</span>
+                </div>
+                <div>
+                    <span class="text-gray-500 text-[10px] font-black uppercase block tracking-widest">Primary GP</span>
+                    <span class="text-sm font-bold">{{ patient.primary_gp or 'Not Stated' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">Quick Actions</h2>
+            <div class="space-y-2">
+                <button 
+                    hx-get="/dashboard/patient/{{ patient.id }}/note-form" 
+                    hx-target="#note-form-anchor"
+                    class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-bold text-sm">Add Clinical Note</button>
+                <button 
+                    hx-get="/dashboard/patient/{{ patient.id }}/event-form?type=appointment" 
+                    hx-target="#event-form-anchor"
+                    class="w-full bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200 transition font-bold text-sm">Schedule Appointment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-span-2 space-y-6">
+        <!-- Vitals History -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Vital Signs History</h2>
+            </div>
+            <div class="max-h-64 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Date</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Weight</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">BP</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">HR</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for v in vitals %}
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-gray-600 font-mono">{{ v.timestamp.strftime('%d %b %Y %H:%M') }}</td>
+                            <td class="px-4 py-3 text-sm font-bold {% if v.weight and patient.baseline_weight and v.weight > patient.baseline_weight + 2 %}text-red-600{% endif %}">{{ v.weight or '--' }} kg</td>
+                            <td class="px-4 py-3 text-sm font-bold">{{ v.systolic or '--' }}/{{ v.diastolic or '--' }}</td>
+                            <td class="px-4 py-3 text-sm">{{ v.heart_rate or '--' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Events & Timeline -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h2 class="text-xl font-bold text-gray-800">Events & Timeline</h2>
+            </div>
+            <div class="p-6">
+                <div id="event-form-anchor"></div>
+                <div id="events-timeline" class="space-y-6">
+                    {% for event in events %}
+                    <div class="flex">
+                        <div class="flex flex-col items-center mr-4">
+                            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                            <div class="w-px h-full bg-gray-200"></div>
+                        </div>
+                        <div class="pb-6">
+                            <p class="text-xs text-gray-400 font-mono">{{ event.timestamp.strftime('%d %b %Y') }}</p>
+                            <p class="text-sm font-bold uppercase tracking-tight 
+                                {% if event.event_type == 'hospitalization' %}text-red-600
+                                {% elif event.event_type == 'med_change' %}text-purple-600
+                                {% elif event.event_type == 'alert_acknowledged' %}text-gray-500
+                                {% else %}text-blue-600{% endif %}">
+                                {{ event.event_type.replace('_', ' ') }}
+                            </p>
+                            <p class="text-gray-700 mt-1 text-sm">{{ event.description }}</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-400 italic">No historical events recorded.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Notes -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h2 class="text-xl font-bold text-gray-800">Clinical Notes</h2>
+            </div>
+            <div class="p-6 space-y-4">
+                <div id="note-form-anchor"></div>
+                <div id="notes-list" class="space-y-4">
+                    {% for note in notes %}
+                    <div class="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400 shadow-sm">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold text-gray-500 uppercase">{{ note.timestamp.strftime('%d %b %Y %H:%M') }}</span>
+                            <span class="text-[10px] font-bold text-blue-700 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded">
+                                Dr. {{ note.author.email.split('@')[0].title() }}
+                            </span>
+                        </div>
+                        <p class="text-gray-800 text-sm whitespace-pre-wrap">{{ note.content }}</p>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-400 italic text-sm">No clinical notes recorded.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

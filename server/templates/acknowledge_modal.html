@@ -1,0 +1,56 @@
+<div id="ack-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="this.parentElement.parentElement.remove()"></div>
+
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+            <div>
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="mt-3 text-center sm:mt-5">
+                    <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title">Acknowledge Alert</h3>
+                    <div class="mt-2 text-sm text-gray-500">
+                        Please provide a reason for acknowledging this alert. This will be logged in the patient's EHR.
+                    </div>
+                </div>
+            </div>
+
+            <form hx-post="/api/v1/vitals/{{ vital_id }}/acknowledge" 
+                  hx-target="#status-{{ patient_id }}" 
+                  hx-on::after-request="document.getElementById('ack-modal').remove()"
+                  class="mt-5 sm:mt-6 space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Reason</label>
+                    <select name="reason" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border" required>
+                        <option value="">Select a reason...</option>
+                        <option value="patient_contacted">Patient contacted / stable</option>
+                        <option value="med_adjusted">Medication adjusted</option>
+                        <option value="false_positive">Erroneous reading / False positive</option>
+                        <option value="scheduled_followup">Scheduled follow-up appointment</option>
+                        <option value="clinically_expected">Expected change for this patient</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Clinical Comment</label>
+                    <textarea name="comment" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Optional notes..."></textarea>
+                </div>
+
+                <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm transition-colors">
+                        Save Acknowledgement
+                    </button>
+                    <button type="button" onclick="document.getElementById('ack-modal').remove()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-1 sm:text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

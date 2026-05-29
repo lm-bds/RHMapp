@@ -1,0 +1,19 @@
+<form hx-post="/dashboard/patient/{{ patient_id }}/events" hx-target="#events-timeline" hx-swap="afterbegin" hx-on::after-request="this.remove()" class="bg-purple-50 p-4 rounded-lg border border-purple-200 mb-4">
+    <label class="block text-sm font-bold text-purple-800 mb-2">New {{ type.title() }}</label>
+    <input type="hidden" name="event_type" value="{{ type }}">
+    
+    {% if type == 'appointment' %}
+    <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Schedule Date & Time</label>
+        <input type="datetime-local" name="scheduled_time" class="w-full p-2 border rounded-md" required>
+    </div>
+    {% endif %}
+
+    <textarea name="description" class="w-full p-2 border rounded-md mb-2" rows="2" 
+              placeholder="{% if type == 'appointment' %}Details of appointment...{% else %}Description of clinical intervention...{% endif %}" required></textarea>
+    
+    <div class="flex justify-end space-x-2">
+        <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-gray-500 px-3 py-1 text-sm">Cancel</button>
+        <button type="submit" class="bg-purple-600 text-white px-4 py-1 rounded text-sm hover:bg-purple-700">Record {{ type.title() }}</button>
+    </div>
+</form>

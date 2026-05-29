@@ -1,0 +1,36 @@
+<form hx-post="/dashboard/patient/{{ patient_id }}/notes" hx-target="#notes-list" hx-swap="afterbegin" hx-on::after-request="this.remove()" class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+    <div class="flex justify-between items-center mb-2">
+        <label class="block text-sm font-bold text-blue-800">New Clinical Note</label>
+        <div class="flex items-center space-x-2">
+            <span class="text-xs text-gray-500 italic">Template:</span>
+            <select id="template-selector" class="text-xs border rounded p-1" onchange="applyTemplate(this.value)">
+                <option value="free">Free Text</option>
+                <option value="soap">SOAP Note</option>
+                <option value="followup">Follow-up Call</option>
+            </select>
+        </div>
+    </div>
+    
+    <textarea id="note-content" name="content" class="w-full p-2 border rounded-md mb-2 font-mono text-sm" rows="6" placeholder="Enter clinical observations..." required></textarea>
+    
+    <div class="flex justify-between items-center">
+        <span class="text-xs text-gray-400">Author: {{ current_user.email }}</span>
+        <div class="flex space-x-2">
+            <button type="button" onclick="this.parentElement.parentElement.parentElement.remove()" class="text-gray-500 px-3 py-1 text-sm">Cancel</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded text-sm hover:bg-blue-700">Save Note</button>
+        </div>
+    </div>
+
+    <script>
+        function applyTemplate(val) {
+            const textarea = document.getElementById('note-content');
+            const templates = {
+                'soap': "SUBJECTIVE:\n\nOBJECTIVE:\n\nASSESSMENT:\n\nPLAN:",
+                'followup': "REASON FOR CALL:\n\nPATIENT REPORT:\n\nVITALS REVIEW:\n\nINTERVENTION/EDUCATION:",
+                'free': ""
+            };
+            textarea.value = templates[val];
+            textarea.focus();
+        }
+    </script>
+</form>
