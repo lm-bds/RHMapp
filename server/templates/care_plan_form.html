@@ -1,0 +1,51 @@
+<form hx-post="/dashboard/patient/{{ patient_id }}/care-plan" hx-target="#workspace-content" hx-swap="innerHTML" class="bg-brand-dark/5 p-6 rounded-2xl border border-brand-dark/10 mb-6 shadow-inner animate-in fade-in duration-300">
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xs font-black text-brand-dark uppercase tracking-widest">Update Clinical Care Plan</h3>
+        <span class="text-[10px] text-stone-400 font-bold italic">Configures daily tasks for the Patient App</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-8">
+        <!-- Vitals Requirements -->
+        <div class="space-y-4">
+            <h4 class="text-[10px] font-black text-brand-accent uppercase tracking-widest border-b border-brand-dark/5 pb-2">Vitals Tracking</h4>
+            <div class="space-y-3">
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="require_weight" {% if care_plan.require_weight %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">Weight (Daily)</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="require_bp" {% if care_plan.require_bp %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">Blood Pressure</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="require_hr" {% if care_plan.require_hr %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">Heart Rate</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="require_spo2" {% if care_plan.require_spo2 %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">SpO2 (Oxygen)</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Questionnaires -->
+        <div class="space-y-4">
+            <h4 class="text-[10px] font-black text-brand-accent uppercase tracking-widest border-b border-brand-dark/5 pb-2">Symptom Assessment</h4>
+            <div class="space-y-3">
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="q_edema" {% if "EDEMA_CHECK" in care_plan.active_questions %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">Daily Edema Check</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" name="q_kccq" {% if "KCCQ_SHORT" in care_plan.active_questions %}checked{% endif %} class="h-4 w-4 text-brand-accent border-border-warm rounded">
+                    <span class="text-sm font-bold text-stone-700 group-hover:text-brand-dark">KCCQ Lifestyle Restriction</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8 pt-4 border-t border-brand-dark/5 flex justify-end space-x-3">
+        <button type="button" onclick="switchTab('vitals')" class="text-stone-400 px-4 py-2 text-[10px] font-black uppercase tracking-widest">Cancel</button>
+        <button type="submit" class="bg-brand-dark text-white px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-md transition-all">Save Care Plan</button>
+    </div>
+</form>

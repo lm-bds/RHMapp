@@ -1,5 +1,8 @@
-<div class="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 text-center">
-    <p class="text-sm font-medium text-gray-700 mb-4">Scan this with the Patient App</p>
-    <img src="data:image/png;base64,{{ qr_base64 }}" alt="Setup QR Code" class="mx-auto shadow-sm">
-    <p class="mt-4 text-xs text-gray-400 font-mono">Token: {{ token }}</p>
+<div class="bg-canvas p-4 rounded-xl border border-dashed border-brand-accent/50 text-center animate-in fade-in duration-300">
+    <p class="text-[9px] font-black text-brand-dark uppercase tracking-widest mb-3">Device Setup QR</p>
+    <div class="bg-white p-2 rounded-lg inline-block shadow-sm border border-border-warm">
+        <img src="data:image/png;base64,{{ qr_base64 }}" alt="Setup QR Code" class="w-32 h-32">
+    </div>
+    <p class="mt-3 text-[8px] text-stone-400 font-bold uppercase tracking-tighter">Scan with Patient App</p>
+    <button onclick="this.closest('#qr-container').innerHTML = ''" class="mt-2 text-[8px] text-brand-accent font-black uppercase tracking-widest hover:underline">Dismiss</button>
 </div>

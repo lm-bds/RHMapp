@@ -80,6 +80,22 @@ class Patient(Base):
     events: Mapped[List["Event"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
     notes: Mapped[List["PatientNote"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
     documents: Mapped[List["Document"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
+    care_plan: Mapped[Optional["CarePlan"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
+
+
+class CarePlan(Base):
+    __tablename__ = "care_plans"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("patients.id"), unique=True, nullable=False)
+    
+    require_weight: Mapped[bool] = mapped_column(Boolean, default=True)
+    require_bp: Mapped[bool] = mapped_column(Boolean, default=True)
+    require_spo2: Mapped[bool] = mapped_column(Boolean, default=False)
+    require_hr: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    active_questions: Mapped[Optional[str]] = mapped_column(Text, default="EDEMA_CHECK", nullable=True) 
+
+    patient: Mapped["Patient"] = relationship(back_populates="care_plan")
 
 
 class Document(Base):

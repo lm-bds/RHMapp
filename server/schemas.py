@@ -63,6 +63,7 @@ class VitalSubmit(BaseModel):
     systolic: Optional[int] = Field(None, description="Systolic blood pressure")
     diastolic: Optional[int] = Field(None, description="Diastolic blood pressure")
     heart_rate: Optional[int] = Field(None, description="Heart rate in bpm")
+    spo2: Optional[int] = Field(None, description="Oxygen saturation %")
 
 class QuestionnaireItem(BaseModel):
     question_id: str
@@ -80,4 +81,6 @@ class TaskItem(BaseModel):
     metadata: Optional[dict] = None
 
 class DailyTasksResponse(BaseModel):
+    patient_name: str
     tasks: List[TaskItem]
+    upcoming_appointments: List[dict] # Simplified for MVP: list of date/description strings

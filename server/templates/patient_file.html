@@ -94,14 +94,27 @@
             <!-- Quick Actions -->
             <div class="bg-card p-5 rounded-2xl border border-border-warm shadow-sm space-y-3">
                 <h2 class="text-[10px] font-black text-stone-400 uppercase tracking-widest border-b border-border-warm pb-2 mb-2">Actions</h2>
+                
+                <!-- QR Code Anchor -->
+                <div id="qr-container" class="mb-2"></div>
+
+                <button hx-post="/dashboard/patient/{{ patient.id }}/generate-qr" hx-target="#qr-container"
+                        class="w-full bg-brand-dark text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-md">Link Mobile Device (QR)</button>
+                
+                <button onclick="switchTab('plan')" hx-get="/dashboard/patient/{{ patient.id }}/care-plan-form" hx-target="#workspace-content"
+                        class="w-full bg-brand-accent text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-brand-terracotta transition-all shadow-md">Update Plan</button>
+
                 <button onclick="switchTab('vitals')" hx-get="/dashboard/patient/{{ patient.id }}/vitals-form" hx-target="#vitals-form-anchor"
-                        class="w-full bg-brand-dark text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-md">Add Vitals</button>
+                        class="w-full bg-canvas text-brand-dark py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-border-warm hover:bg-border-warm transition-all">Add Vitals</button>
                 <button onclick="switchTab('notes')" hx-get="/dashboard/patient/{{ patient.id }}/note-form" hx-target="#note-form-anchor"
-                        class="w-full bg-brand-accent text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-brand-terracotta">Add Note</button>
+                        class="w-full bg-brand-accent text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-brand-terracotta transition-all">Add Note</button>
                 <button onclick="switchTab('docs')" hx-get="/dashboard/patient/{{ patient.id }}/document-form" hx-target="#document-form-anchor"
-                        class="w-full bg-canvas text-brand-dark py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-border-warm hover:bg-border-warm">Add Document</button>
+                        class="w-full bg-canvas text-brand-dark py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-border-warm hover:bg-border-warm transition-all">Add Document</button>
+                
                 <button hx-get="/dashboard/patient/{{ patient.id }}/event-form?type=hospitalization" hx-target="#event-form-anchor"
-                        class="w-full bg-status-critical text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:opacity-90">Log Hospitalisation</button>
+                        class="w-full bg-status-critical text-white py-2 rounded-lg font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-all shadow-md">Log Hospitalisation</button>
+                <button hx-get="/dashboard/patient/{{ patient.id }}/event-form?type=appointment" hx-target="#event-form-anchor"
+                        class="w-full bg-white text-brand-dark py-2 rounded-lg font-black text-[10px] uppercase tracking-widest border border-border-warm hover:bg-canvas transition-all">Schedule Appt</button>
             </div>
         </div>
 
@@ -109,30 +122,70 @@
         <div class="col-span-6 flex flex-col bg-card rounded-2xl border border-border-warm shadow-sm overflow-hidden">
             <div class="flex border-b border-border-warm bg-stone-50">
                 <button onclick="switchTab('vitals')" id="tab-vitals" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-brand-accent border-b-2 border-brand-accent bg-white">Vital Signs</button>
+                <button onclick="switchTab('plan')" id="tab-plan" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-stone-400 hover:bg-white">Care Plan</button>
                 <button onclick="switchTab('notes')" id="tab-notes" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-stone-400 hover:bg-white">Notes</button>
                 <button onclick="switchTab('docs')" id="tab-docs" class="workspace-tab px-6 py-3 text-[10px] font-black uppercase tracking-widest border-r border-border-warm text-stone-400 hover:bg-white">Documents</button>
             </div>
 
             <div id="workspace-content" class="flex-1 overflow-y-auto p-5 custom-scrollbar bg-white">
+                
+                <!-- Plan Tab -->
+                <div id="content-plan" class="tab-panel hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-sm font-black text-brand-dark uppercase tracking-widest">Active Care Plan</h3>
+                        <button hx-get="/dashboard/patient/{{ patient.id }}/care-plan-form" hx-target="#workspace-content" class="text-[10px] font-black text-brand-accent uppercase border border-brand-accent px-3 py-1 rounded-lg">Edit Plan</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        {% if patient.care_plan %}
+                        <div class="bg-stone-50 p-4 rounded-xl border border-border-warm">
+                            <h4 class="text-[9px] font-black text-stone-400 uppercase mb-3">Required Vitals</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between"><span class="text-xs font-bold text-stone-600">Weight</span><span class="text-xs font-black {{ 'text-status-stable' if patient.care_plan.require_weight else 'text-stone-300' }}">{{ 'Daily' if patient.care_plan.require_weight else 'Disabled' }}</span></div>
+                                <div class="flex justify-between"><span class="text-xs font-bold text-stone-600">BP</span><span class="text-xs font-black {{ 'text-status-stable' if patient.care_plan.require_bp else 'text-stone-300' }}">{{ 'Daily' if patient.care_plan.require_bp else 'Disabled' }}</span></div>
+                                <div class="flex justify-between"><span class="text-xs font-bold text-stone-600">SpO2</span><span class="text-xs font-black {{ 'text-status-stable' if patient.care_plan.require_spo2 else 'text-stone-300' }}">{{ 'Daily' if patient.care_plan.require_spo2 else 'Disabled' }}</span></div>
+                                <div class="flex justify-between"><span class="text-xs font-bold text-stone-600">Heart Rate</span><span class="text-xs font-black {{ 'text-status-stable' if patient.care_plan.require_hr else 'text-stone-300' }}">{{ 'Daily' if patient.care_plan.require_hr else 'Disabled' }}</span></div>
+                            </div>
+                        </div>
+                        <div class="bg-stone-50 p-4 rounded-xl border border-border-warm">
+                            <h4 class="text-[9px] font-black text-stone-400 uppercase mb-3">Active Questionnaires</h4>
+                            <ul class="space-y-2">
+                                {% if patient.care_plan.active_questions %}
+                                    {% if "EDEMA_CHECK" in patient.care_plan.active_questions %}<li class="text-xs font-bold text-stone-600">Daily Edema Check</li>{% endif %}
+                                    {% if "KCCQ_SHORT" in patient.care_plan.active_questions %}<li class="text-xs font-bold text-stone-600">KCCQ Assessment</li>{% endif %}
+                                {% else %}
+                                    <li class="text-xs italic text-stone-400">No active questionnaires</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        {% else %}
+                        <div class="col-span-2 text-center py-10">
+                            <p class="text-sm text-stone-400 italic mb-4">No care plan defined for this patient.</p>
+                            <button hx-get="/dashboard/patient/{{ patient.id }}/care-plan-form" hx-target="#workspace-content" class="bg-brand-accent text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest">Create Care Plan</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Vitals Tab -->
                 <div id="content-vitals" class="tab-panel">
                     <div id="vitals-form-anchor"></div>
                     <table class="min-w-full divide-y divide-border-warm">
                         <thead class="bg-stone-50 sticky top-0 z-10">
                             <tr>
-                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">Date</th>
-                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">Wt</th>
-                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">BP</th>
-                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">O2</th>
-                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase">HR</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase tracking-widest">Date</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase tracking-widest">Weight</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase tracking-widest">BP</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase tracking-widest">O2</th>
+                                <th class="px-4 py-2 text-left text-[9px] font-black text-stone-400 uppercase tracking-widest">HR</th>
                             </tr>
                         </thead>
                         <tbody id="vitals-list" class="divide-y divide-border-warm">
                             {% for v in vitals %}
                             <tr class="hover:bg-canvas transition-colors">
                                 <td class="px-4 py-3 text-xs font-bold text-stone-500 font-mono">{{ v.timestamp.strftime('%d %b • %H:%M') }}</td>
-                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.weight or '--' }}</td>
-                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.systolic }}/{{ v.diastolic }}</td>
+                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.weight or '--' }}kg</td>
+                                <td class="px-4 py-3 text-sm font-black text-brand-dark">{{ v.systolic or '--' }}/{{ v.diastolic or '--' }}</td>
                                 <td class="px-4 py-3 text-sm font-black {% if v.spo2 and v.spo2 < 92 %}text-status-critical{% else %}text-status-stable{% endif %}">{{ v.spo2 or '--' }}%</td>
                                 <td class="px-4 py-3 text-sm font-black text-stone-600">{{ v.heart_rate or '--' }}</td>
                             </tr>

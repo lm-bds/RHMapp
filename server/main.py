@@ -101,6 +101,109 @@ async def get_current_device(
     return patient
 
 
+# --- Mobile API Routes ---
+
+@app.post("/api/v1/staff/login", response_model=schemas.Token)
+async def staff_login(form_data: schemas.StaffLogin, db: Session = Depends(get_db)):
+    staff = db.scalar(select(models.StaffUser).where(models.StaffUser.email == form_data.email))
+    if not staff or not pwd_context.verify(form_data.password, staff.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect credentials")
+    access_token = create_access_token(data={"sub": staff.email, "role": staff.role})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/api/v1/auth/bind-device", response_model=schemas.Token)
+async def bind_device(data: schemas.DeviceBind, db: Session = Depends(get_db)):
+    try:
+        patient = db.get(models.Patient, uuid.UUID(data.setup_token))
+        if not patient: raise HTTPException(status_code=404, detail="Patient not found")
+    except ValueError: raise HTTPException(status_code=400, detail="Invalid token")
+
+    new_token_id = uuid.uuid4()
+    access_token = create_access_token(data={"sub": str(patient.id), "tid": str(new_token_id)})
+    db.add(models.DeviceToken(id=new_token_id, patient_id=patient.id, auth_token=access_token))
+    db.commit()
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/api/v1/tasks/today", response_model=schemas.DailyTasksResponse)
+async def get_daily_tasks(
+    current_patient: Annotated[models.Patient, Depends(get_current_device)],
+    db: Session = Depends(get_db)
+):
+    # Fetch upcoming appointments
+    now = datetime.now(timezone.utc)
+    appointments = db.scalars(
+        select(models.Event)
+        .where(
+            models.Event.patient_id == current_patient.id,
+            models.Event.event_type == 'appointment',
+            models.Event.scheduled_time > now
+        )
+        .order_by(models.Event.scheduled_time.asc())
+    ).all()
+
+    apt_list = [{"date": a.scheduled_time.strftime("%d %b at %H:%M"), "description": a.description} for a in appointments]
+
+    # Fetch Care Plan (create default if missing)
+    cp = db.scalar(select(models.CarePlan).where(models.CarePlan.patient_id == current_patient.id))
+    if not cp:
+        cp = models.CarePlan(patient_id=current_patient.id)
+        db.add(cp)
+        db.commit()
+        db.refresh(cp)
+
+    # Build dynamic task list
+    tasks = []
+    if cp.require_weight:
+        tasks.append({"id": "weight_reading", "type": "vital", "label": "Step on the scale", "required": True})
+    if cp.require_bp:
+        tasks.append({"id": "bp_reading", "type": "vital", "label": "Take your blood pressure", "required": True})
+    if cp.require_hr:
+        tasks.append({"id": "hr_reading", "type": "vital", "label": "Check your heart rate", "required": True})
+    if cp.require_spo2:
+        tasks.append({"id": "spo2_reading", "type": "vital", "label": "Check your oxygen (SpO2)", "required": True})
+
+    # Add Questionnaire Tasks
+    if cp.active_questions:
+        q_ids = cp.active_questions.split(",")
+        for q_id in q_ids:
+            if q_id == "EDEMA_CHECK":
+                tasks.append({"id": "edema_check", "type": "questionnaire", "label": "Are your ankles swollen?", "required": True, "metadata": {"options": ["Yes", "No"]}})
+            if q_id == "KCCQ_SHORT":
+                tasks.append({"id": "kccq_short", "type": "questionnaire", "label": "How restricted was your lifestyle today by heart failure?", "required": True, "metadata": {"options": ["Extremely", "Slightly", "Not at all"]}})
+
+    return {
+        "patient_name": current_patient.first_name,
+        "tasks": tasks,
+        "upcoming_appointments": apt_list
+    }
+
+
+@app.post("/api/v1/tasks/submit")
+async def submit_tasks(
+    data: schemas.TaskSubmit,
+    current_patient: Annotated[models.Patient, Depends(get_current_device)],
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    if data.vitals:
+        db.add(models.Vital(
+            patient_id=current_patient.id,
+            weight=data.vitals.weight,
+            systolic=data.vitals.systolic,
+            diastolic=data.vitals.diastolic,
+            heart_rate=data.vitals.heart_rate,
+            spo2=data.vitals.spo2
+        ))
+    if data.questionnaire:
+        for ans in data.questionnaire:
+            db.add(models.QuestionnaireResponse(patient_id=current_patient.id, question_id=ans.question_id, answer_value=ans.answer_value))
+    db.commit()
+    background_tasks.add_task(evaluate_patient_vitals, current_patient.id, db)
+    return {"status": "success"}
+
+
 # --- Dashboard Routes ---
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -210,6 +313,46 @@ async def patient_file(
     })
 
 
+@app.get("/dashboard/patient/{patient_id}/care-plan-form", response_class=HTMLResponse)
+async def get_care_plan_form(patient_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
+    cp = db.scalar(select(models.CarePlan).where(models.CarePlan.patient_id == patient_id))
+    if not cp:
+        cp = models.CarePlan(patient_id=patient_id)
+        db.add(cp)
+        db.commit()
+        db.refresh(cp)
+    return templates.TemplateResponse("care_plan_form.html", {"request": request, "patient_id": patient_id, "care_plan": cp})
+
+
+@app.post("/dashboard/patient/{patient_id}/care-plan", response_class=HTMLResponse)
+async def update_care_plan(
+    patient_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.StaffUser = Depends(get_current_staff)
+):
+    form_data = await request.form()
+    cp = db.scalar(select(models.CarePlan).where(models.CarePlan.patient_id == patient_id))
+    
+    # Update Booleans
+    cp.require_weight = "require_weight" in form_data
+    cp.require_bp = "require_bp" in form_data
+    cp.require_hr = "require_hr" in form_data
+    cp.require_spo2 = "require_spo2" in form_data
+    
+    # Update Questions
+    qs = []
+    if "q_edema" in form_data: qs.append("EDEMA_CHECK")
+    if "q_kccq" in form_data: qs.append("KCCQ_SHORT")
+    cp.active_questions = ",".join(qs)
+    
+    db.add(models.Event(patient_id=patient_id, event_type="care_plan_updated", description=f"Care plan updated by {current_user.email}"))
+    db.commit()
+    
+    # Return the refreshed EHR content (redirect back to vitals tab for feedback)
+    return RedirectResponse(url=f"/dashboard/patient/{patient_id}/file", status_code=303)
+
+
 # --- Clinical Actions ---
 
 @app.get("/dashboard/patient/{patient_id}/vitals-form", response_class=HTMLResponse)
@@ -312,6 +455,29 @@ async def upload_document(patient_id: uuid.UUID, filename: str = Form(...), doc_
     db.commit()
     db.refresh(new_doc)
     return f"""<div class="flex items-center justify-between p-3 bg-white border border-border-warm rounded-xl hover:shadow-md transition-all"><div class="flex items-center space-x-3"><div class="bg-brand-dark/5 p-2 rounded-lg text-brand-dark"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg></div><div><p class="text-sm font-bold text-stone-800">{new_doc.filename}</p><p class="text-[10px] font-black text-brand-accent uppercase tracking-widest">{new_doc.doc_type}</p></div></div><button class="text-stone-400 hover:text-status-critical"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div>"""
+
+@app.post("/dashboard/patient/{patient_id}/generate-qr", response_class=HTMLResponse)
+async def generate_qr(
+    patient_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.StaffUser = Depends(get_current_staff)
+):
+    setup_token = str(patient_id)
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(setup_token)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
+    
+    return templates.TemplateResponse(
+        "qr_snippet.html", 
+        {"request": request, "qr_base64": qr_base64, "token": setup_token}
+    )
+
 
 # --- Vitals ---
 
